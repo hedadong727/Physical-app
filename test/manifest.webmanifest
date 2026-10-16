@@ -1,0 +1,32 @@
+{
+  "id": "/",
+  "name": "运动的合成与分解演示实验室",
+  "short_name": "物理运动分解",
+  "description": "高中物理运动的合成与分解可视化仿真实验：演示二维平面分运动与合运动、位移/速度/加速度矢量合成与分解及轨迹方程解析。",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#0f172a",
+  "background_color": "#0b0f19",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+@layer utilities {
+  /* Subtle dark tech dot grid background */
+  .bg-tech-grid {
+    background-color: #0b0f19;
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(30, 58, 138, 0.15) 0%, transparent 60%),
+      radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 100% 100%, 24px 24px;
+  }
+
+  /* Hardware screw head styling */
+  .screw-head {
+    width: 10px;
+    height: 10px;
+    border-radius: 9999px;
+    background: linear-gradient(135deg, #475569 0%, #1e293b 100%);
+    border: 1px solid #334155;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3), 0 1px 2px rgba(0, 0, 0, 0.5);
+    position: relative;
+  }
+  .screw-head::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 6px;
+    height: 1.5px;
+    background: #0f172a;
+    transform: translate(-50%, -50%) rotate(45deg);
+    border-radius: 1px;
+  }
+
+  /* Screen glass glare overlay */
+  .screen-glass-sheen {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0.02) 25%,
+      transparent 50%
+    );
+  }
+}
+
+/* Custom range input with realistic tactile knob */
+input[type='range'].tactile-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 10px;
+  background: #090d16;
+  border-radius: 9999px;
+  border: 1px solid #1e293b;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(255, 255, 255, 0.08);
+  outline: none;
+}
+
+input[type='range'].tactile-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #38bdf8 0%, #0284c7 50%, #0369a1 100%);
+  border: 1px solid #7dd3fc;
+  box-shadow: 0 4px 0 #075985, 0 6px 10px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  cursor: grab;
+  transition: transform 0.1s ease;
+}
+
+input[type='range'].tactile-range::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(0.95);
+  box-shadow: 0 2px 0 #075985, 0 3px 6px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+input[type='range'].tactile-range::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #38bdf8 0%, #0284c7 50%, #0369a1 100%);
+  border: 1px solid #7dd3fc;
+  box-shadow: 0 4px 0 #075985, 0 6px 10px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  cursor: grab;
+}

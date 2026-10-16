@@ -1,0 +1,6 @@
+{
+  "name": "运动的合成与分解演示实验室",
+  "description": "高中物理运动的合成与分解可视化仿真实验：演示二维平面分运动与合运动、位移/速度/加速度矢量合成与分解及轨迹方程解析。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

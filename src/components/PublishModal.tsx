@@ -248,10 +248,10 @@ export const PublishModal: React.FC<PublishModalProps> = ({
               </div>
               <div className="text-slate-300 text-[11px] space-y-1">
                 <div>
-                  • <strong>首选运行方式：</strong>下载下方的 <strong>Windows U盘包 (.zip)</strong>，解压后双击 <strong>「一键在Windows运行.bat」</strong>，自动调起 Edge/Chrome 全功能运行。
+                  • <strong>独立应用窗口模式 (无地址栏/工具栏)：</strong>解压下方 Windows 离线包，双击 <strong>「以独立应用窗口直接启动(无地址栏).bat」</strong> 或 <strong>「一键在Windows运行.bat」</strong>，自动隐藏浏览器地址栏与标签栏，顶部仅保留「最小化、最大化、关闭」三按钮！
                 </div>
                 <div>
-                  • <strong>杀软拦截备选：</strong>若教室电脑禁止运行 .bat 脚本，可直接双击 <strong>单文件无需服务器版 (.html)</strong>，任何浏览器双击秒开。
+                  • <strong>单文件免安装运行：</strong>直接双击 <strong>单文件无需服务器版 (.html)</strong>，打开后点击右上角 <strong>「□ 最大化」</strong>，同样可一键隐藏浏览器所有边框和地址栏！
                 </div>
               </div>
             </div>
@@ -264,10 +264,10 @@ export const PublishModal: React.FC<PublishModalProps> = ({
               </div>
               <div className="text-slate-300 text-[11px] space-y-1">
                 <div>
-                  • <strong>为什么解压 index.html 会白屏？</strong> 平板浏览器对 file:// 协议默认有 CORS 跨域拦截，且不支持执行 .bat 批处理。
+                  • <strong>隐藏地址栏与工具栏：</strong>在平板浏览器中打开后，直接点击右上角 <strong>「□ 最大化」</strong> 按钮，浏览器地址栏与系统导航栏将瞬间隐藏，进入沉浸式应用模式。
                 </div>
                 <div>
-                  • <strong>推荐方案：</strong>下载 <strong>单文件无需服务器版 (.html)</strong>，代码 100% 内嵌，点击即开！或在线访问点击浏览器 <strong>“添加到主屏幕” (PWA)</strong> 脱机秒开。
+                  • <strong>首选方案：</strong>下载 <strong>单文件无需服务器版 (.html)</strong>，点击即开；或在浏览器菜单选择 <strong>“添加到主屏幕/安装应用” (PWA)</strong>，桌面生成原生应用图标，脱机秒开无地址栏！
                 </div>
               </div>
             </div>

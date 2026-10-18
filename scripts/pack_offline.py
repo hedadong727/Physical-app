@@ -78,6 +78,7 @@ def pack_offline():
     # 3. Copy helper guides and bat files to dist
     helper_files = [
         '一键在Windows运行.bat',
+        '以独立应用窗口直接启动(无地址栏).bat',
         'Windows系统使用说明.txt',
         'Android平板系统使用说明.txt',
         '使用说明.txt'
@@ -94,6 +95,7 @@ def pack_offline():
     win_zip_dist = os.path.join(dist_dir, win_zip_name)
 
     win_files = [
+        '以独立应用窗口直接启动(无地址栏).bat',
         '一键在Windows运行.bat',
         single_html_name,
         'Windows系统使用说明.txt',
@@ -163,6 +165,7 @@ def pack_offline():
     usb_zip_dist = os.path.join(dist_dir, usb_zip_name)
 
     all_files = [
+        '以独立应用窗口直接启动(无地址栏).bat',
         '一键在Windows运行.bat',
         single_html_name,
         'Windows系统使用说明.txt',

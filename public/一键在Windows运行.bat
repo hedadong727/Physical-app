@@ -39,11 +39,49 @@ while ($true) { ^
     } ^
 } ^
 Write-Host \"[成功] 本地服务已启动: http://localhost:$port/\"; ^
-Write-Host \"正在自动打开浏览器演示界面...\"; ^
+Write-Host \"正在以独立应用窗口模式启动 (已隐藏地址栏与工具栏，仅保留右上角三按钮)...\"; ^
 Write-Host \"---------------------------------------------------------------------\"; ^
 Write-Host \"【课堂使用提示】教学演示期间请保持此黑底窗口打开，关闭此窗口即停止服务。\"; ^
 Write-Host \"---------------------------------------------------------------------\"; ^
-Start-Process \"http://localhost:$port/\"; ^
+$url = \"http://localhost:$port/\"; ^
+$launched = $false; ^
+$edgePaths = @( ^
+    (Join-Path ${env:ProgramFiles(x86)} 'Microsoft\Edge\Application\msedge.exe'), ^
+    (Join-Path $env:ProgramFiles 'Microsoft\Edge\Application\msedge.exe'), ^
+    (Join-Path $env:LocalAppData 'Microsoft\Edge\Application\msedge.exe') ^
+); ^
+foreach ($p in $edgePaths) { ^
+    if (Test-Path $p) { ^
+        Start-Process $p -ArgumentList \"--app=$url\"; ^
+        $launched = $true; ^
+        break; ^
+    } ^
+} ^
+if (-not $launched) { ^
+    $chromePaths = @( ^
+        (Join-Path $env:ProgramFiles 'Google\Chrome\Application\chrome.exe'), ^
+        (Join-Path ${env:ProgramFiles(x86)} 'Google\Chrome\Application\chrome.exe'), ^
+        (Join-Path $env:LocalAppData 'Google\Chrome\Application\chrome.exe') ^
+    ); ^
+    foreach ($p in $chromePaths) { ^
+        if (Test-Path $p) { ^
+            Start-Process $p -ArgumentList \"--app=$url\"; ^
+            $launched = $true; ^
+            break; ^
+        } ^
+    } ^
+} ^
+if (-not $launched) { ^
+    try { ^
+        Start-Process 'msedge.exe' -ArgumentList \"--app=$url\"; ^
+    } catch { ^
+        try { ^
+            Start-Process 'chrome.exe' -ArgumentList \"--app=$url\"; ^
+        } catch { ^
+            Start-Process $url; ^
+        } ^
+    } ^
+} ^
 while ($listener.IsListening) { ^
     try { ^
         $context = $listener.GetContext(); ^
@@ -78,31 +116,31 @@ if %errorlevel% neq 0 (
     :: 尝试 Python
     where python >nul 2>nul
     if %errorlevel% equ 0 (
-        echo [2/3] 检测到系统安装了 Python，正在通过 Python 启动本地服务器...
-        start http://localhost:8080
+        echo [2/3] 检测到系统安装了 Python，正在通过 Python 启动本地独立应用服务器...
+        start msedge.exe --app="http://localhost:8080" 2>nul || start chrome.exe --app="http://localhost:8080" 2>nul || start http://localhost:8080
         python -m http.server 8080 --bind 127.0.0.1
         goto end
     )
     
     where py >nul 2>nul
     if %errorlevel% equ 0 (
-        echo [2/3] 检测到系统安装了 Python Launcher，正在启动本地服务器...
-        start http://localhost:8080
+        echo [2/3] 检测到系统安装了 Python Launcher，正在启动本地独立应用服务器...
+        start msedge.exe --app="http://localhost:8080" 2>nul || start chrome.exe --app="http://localhost:8080" 2>nul || start http://localhost:8080
         py -m http.server 8080 --bind 127.0.0.1
         goto end
     )
 
-    :: 尝试使用 Edge 跨域调试模式直接打开
-    echo [3/3] 正在尝试通过系统内置 Edge 浏览器直接加载演示文件...
-    start msedge.exe --allow-file-access-from-files "%~dp0index.html" 2>nul
-    if %errorlevel% neq 0 (
-        if exist "%~dp0单文件无需服务器_双击即开.html" (
-            echo [提示] 正在使用免服务器单文件版直接启动...
-            start "" "%~dp0单文件无需服务器_双击即开.html"
-        ) else (
-            start "" "%~dp0index.html"
-        )
+    :: 尝试使用 Edge / Chrome 独立应用模式直接打开免服务器单文件版 (完全无需后台服务，且无地址栏无工具栏)
+    echo [3/3] 正在通过系统内置 Edge 浏览器以独立应用窗口模式启动...
+    if exist "%~dp0单文件无需服务器_双击即开.html" (
+        start msedge.exe --app="file:///%~dp0单文件无需服务器_双击即开.html" 2>nul
+        if %errorlevel% equ 0 goto end
+        start chrome.exe --app="file:///%~dp0单文件无需服务器_双击即开.html" 2>nul
+        if %errorlevel% equ 0 goto end
+        start "" "%~dp0单文件无需服务器_双击即开.html"
+        goto end
     )
+    start msedge.exe --app="%~dp0index.html" 2>nul || start "" "%~dp0index.html"
 )
 
 :end

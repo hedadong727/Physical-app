@@ -113,7 +113,7 @@ export default function App() {
       setDeferredPrompt(null);
     }
   };
-  // Preset selection (default to Horizontal Projectile: classic high school model)
+  // Preset selection (default to preset 0: 蜡烛实验)
   const defaultPreset = PHYSICS_PRESETS[0];
   const [currentPresetId, setCurrentPresetId] = useState<string | null>(defaultPreset.id);
 
@@ -128,7 +128,7 @@ export default function App() {
   const [vectorOptions, setVectorOptions] = useState<VectorDisplayOptions>({
     showDisplacement: true,
     showVelocity: true,
-    showAcceleration: true,
+    showAcceleration: defaultPreset.vectorOptions?.showAcceleration ?? false,
     showParallelogram: true,
     showProjections: true,
     showTrajectory: true,

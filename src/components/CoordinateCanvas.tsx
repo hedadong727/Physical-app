@@ -300,8 +300,8 @@ function drawBoat(
   currentTime: number,
   currentState: InstantaneousState
 ) {
-  const L = 38 * sf; // boat length
-  const W = 18 * sf; // boat width
+  const L = 32 * sf; // boat length (适度紧凑，确保速度与合速度矢量超越船体鲜明醒目)
+  const W = 15 * sf; // boat width
 
   // 1. Stern Propeller Wake (船尾推力尾波与水花，向 -y 方向喷流，驱动小船沿 +y 前进)
   ctx.save();
@@ -836,244 +836,13 @@ function drawSceneToContext({
     ctx.fillText(`s = ${currentState.s.toFixed(2)} m`, midPx + 8 * sf, midPy - 8 * sf);
   }
 
-  // 6B. 速度合成与分解 (Velocity Vector v)
-  if (vectorOptions.showVelocity && currentState.v > 0.05) {
-    const velColor = isDark ? '#f43f5e' : '#dc2626';
-    const velCompColor = isDark ? '#fb7185' : '#e11d48';
-
-    // 缩放响应：随画布缩放比例 (scale) 动态等比例放大/缩小平行四边形（基准为默认 scale = 35）
-    const zoomRatio = Math.max(0.25, scale / 35);
-    const maxVel = Math.max(Math.abs(currentState.vx), Math.abs(currentState.vy), currentState.v);
-    const baseVScale = maxVel <= 3.5 ? 13.0 : maxVel <= 7.0 ? 9.5 : maxVel <= 12.0 ? 7.0 : 5.0;
-    const vScale = baseVScale * zoomRatio * sf;
-
-    const vTipX = currentScreen.px + currentState.vx * vScale;
-    const vTipY = currentScreen.py - currentState.vy * vScale;
-    const vxTipX = currentScreen.px + currentState.vx * vScale;
-    const vxTipY = currentScreen.py;
-    const vyTipX = currentScreen.px;
-    const vyTipY = currentScreen.py - currentState.vy * vScale;
-
-    // 绘制合速度主箭头 (实线)
-    drawArrow(currentScreen.px, currentScreen.py, vTipX, vTipY, velColor, 3.2 * sf);
-
-    const hasVx = Math.abs(currentState.vx) > 0.05;
-    const hasVy = Math.abs(currentState.vy) > 0.05;
-
-    if (observationMode === 'both') {
-      // 分速度矢量：实线箭头 (严格遵循物理矢量实线规范)
-      if (hasVx) {
-        drawArrow(currentScreen.px, currentScreen.py, vxTipX, vxTipY, velCompColor, 2.4 * sf);
-      }
-      if (hasVy) {
-        drawArrow(currentScreen.px, currentScreen.py, vyTipX, vyTipY, velCompColor, 2.4 * sf);
-      }
-
-      if (vectorOptions.showParallelogram && hasVx && hasVy) {
-        ctx.save();
-        ctx.strokeStyle = isDark ? '#f43f5e' : '#f87171';
-        ctx.lineWidth = Math.max(1, 1 * sf);
-        ctx.setLineDash([3 * sf, 3 * sf]);
-        ctx.beginPath();
-        ctx.moveTo(vxTipX, vxTipY);
-        ctx.lineTo(vTipX, vTipY);
-        ctx.moveTo(vyTipX, vyTipY);
-        ctx.lineTo(vTipX, vTipY);
-        ctx.stroke();
-        ctx.restore();
-      }
-    }
-
-    ctx.font = `bold ${Math.round(11 * sf)}px sans-serif`;
-    ctx.fillStyle = velColor;
-
-    // 合速度数值标注 (位于合速度箭头顶端外侧，绝不遮挡平行四边形内部与边框)
-    const hasBothV = hasVx && hasVy;
-    const vLabel = isRiverCrossing
-      ? `v合 = ${currentState.v.toFixed(2)} m/s`
-      : (hasBothV ? `v合 = ${currentState.v.toFixed(2)} m/s` : `v = ${currentState.v.toFixed(2)} m/s`);
-
-    ctx.save();
-    const vAlignRight = currentState.vx < 0;
-    ctx.textAlign = vAlignRight ? 'right' : 'left';
-    const vOffsetY = currentState.vy >= 0 ? -8 * sf : 16 * sf;
-    ctx.fillText(
-      vLabel,
-      vTipX + (vAlignRight ? -8 * sf : 8 * sf),
-      vTipY + vOffsetY
-    );
-    ctx.restore();
-
-    if (observationMode === 'both') {
-      // 分速度数值标注：精确定位在分速度矢量的箭头顶端外侧，随缩放始终锚定跟随箭头，且完全不遮挡平行四边形
-      if (hasVx) {
-        ctx.save();
-        ctx.fillStyle = isDark ? '#38bdf8' : '#0284c7';
-        ctx.textAlign = 'center';
-        // 平行四边形在水平线上方(vy >= 0)时，vx标注位于水平线下方；反之在上方
-        const vxLabelY = currentScreen.py + (currentState.vy >= 0 ? 18 * sf : -12 * sf);
-        // 核心改动：锚定在 vx 箭头顶端 (vxTipX) 附近，放大/缩小/移动时始终跟随箭头！
-        const vxLabelX = Math.min(w - 36 * sf, Math.max(36 * sf, vxTipX));
-        const vxText = isRiverCrossing
-          ? `v_水 = ${currentState.vx.toFixed(1)} m/s`
-          : `vx = ${currentState.vx.toFixed(1)} m/s`;
-        ctx.fillText(vxText, vxLabelX, vxLabelY);
-        ctx.restore();
-      }
-
-      if (hasVy) {
-        ctx.save();
-        ctx.fillStyle = isDark ? '#fbbf24' : '#b45309';
-        // 平行四边形在竖直线右侧(vx >= 0)时，vy标注位于竖直线左侧；反之在右侧
-        const vyAlignRight = currentState.vx >= 0;
-        ctx.textAlign = vyAlignRight ? 'right' : 'left';
-        ctx.textBaseline = 'middle';
-        const vyLabelX = currentScreen.px + (vyAlignRight ? -10 * sf : 10 * sf);
-        // 核心改动：锚定在 vy 箭头顶端 (vyTipY) 附近，放大/缩小/移动时始终跟随箭头！
-        const vyLabelY = Math.min(h - 18 * sf, Math.max(18 * sf, vyTipY));
-        const vyText = isRiverCrossing
-          ? `v_船 = ${currentState.vy.toFixed(1)} m/s`
-          : `vy = ${currentState.vy.toFixed(1)} m/s`;
-        ctx.fillText(vyText, vyLabelX, vyLabelY);
-        ctx.restore();
-      }
-    }
-  }
-
-  // 6C. 加速度合成与分解 (Acceleration Vector a)
-  if (vectorOptions.showAcceleration && currentState.a > 0.05) {
-    const accColor = isDark ? '#fbbf24' : '#d97706';
-    const accCompColor = isDark ? '#fde047' : '#b45309';
-
-    // 缩放响应：随画布缩放比例 (scale) 动态等比例放大/缩小加速度平行四边形
-    const zoomRatio = Math.max(0.25, scale / 35);
-    const maxAccel = Math.max(Math.abs(currentState.ax), Math.abs(currentState.ay), currentState.a);
-    const baseAScale = maxAccel <= 3.5 ? 18.0 : maxAccel <= 6.0 ? 13.0 : maxAccel <= 10.5 ? 9.0 : 6.5;
-    const aScale = baseAScale * zoomRatio * sf;
-
-    const aTipX = currentScreen.px + currentState.ax * aScale;
-    const aTipY = currentScreen.py - currentState.ay * aScale;
-    const axTipX = currentScreen.px + currentState.ax * aScale;
-    const axTipY = currentScreen.py;
-    const ayTipX = currentScreen.px;
-    const ayTipY = currentScreen.py - currentState.ay * aScale;
-
-    // 绘制合加速度主矢量
-    drawArrow(currentScreen.px, currentScreen.py, aTipX, aTipY, accColor, 3.2 * sf);
-
-    const hasAx = Math.abs(currentState.ax) > 0.05;
-    const hasAy = Math.abs(currentState.ay) > 0.05;
-
-    if (observationMode === 'both') {
-      // 分加速度矢量：实线箭头 (严格遵循物理矢量实线规范)
-      if (hasAx) {
-        drawArrow(currentScreen.px, currentScreen.py, axTipX, axTipY, accCompColor, 2.4 * sf);
-      }
-      if (hasAy) {
-        drawArrow(currentScreen.px, currentScreen.py, ayTipX, ayTipY, accCompColor, 2.4 * sf);
-      }
-
-      // 加速度平行四边形定则合成虚线框（当存在两轴分加速度时完整闭合）
-      if (vectorOptions.showParallelogram && hasAx && hasAy) {
-        ctx.save();
-        ctx.strokeStyle = isDark ? '#f59e0b' : '#fbbf24';
-        ctx.lineWidth = Math.max(1, 1 * sf);
-        ctx.setLineDash([3 * sf, 3 * sf]);
-        ctx.beginPath();
-        ctx.moveTo(axTipX, axTipY);
-        ctx.lineTo(aTipX, aTipY);
-        ctx.moveTo(ayTipX, ayTipY);
-        ctx.lineTo(aTipX, aTipY);
-        ctx.stroke();
-        ctx.restore();
-      }
-    }
-
-    ctx.font = `bold ${Math.round(11 * sf)}px sans-serif`;
-    ctx.fillStyle = accColor;
-
-    const hasBothA = hasAx && hasAy;
-    const aLabel = hasBothA
-      ? `a合 = ${currentState.a.toFixed(2)} m/s²`
-      : `a = ${currentState.a.toFixed(2)} m/s²`;
-
-    // 合加速度数值标注 (位于合加速度箭头顶端外侧，绝不遮挡平行四边形，随缩放始终锚定跟随箭头)
-    ctx.save();
-    const aAlignRight = currentState.ax < 0;
-    ctx.textAlign = aAlignRight ? 'right' : 'left';
-    let aOffsetY = currentState.ay >= 0 ? -8 * sf : 16 * sf;
-    const aLabelX = aTipX + (aAlignRight ? -8 * sf : 8 * sf);
-
-    // 若同时显示速度与加速度且两合矢量箭头末端非常靠近，做错位避让防止重叠
-    if (vectorOptions.showVelocity && currentState.v > 0.05) {
-      // 检查合速度箭头末端位置
-      const maxVel = Math.max(Math.abs(currentState.vx), Math.abs(currentState.vy), currentState.v);
-      const baseVScale = maxVel <= 3.5 ? 13.0 : maxVel <= 7.0 ? 9.5 : maxVel <= 12.0 ? 7.0 : 5.0;
-      const vScale = baseVScale * zoomRatio * sf;
-      const vTipX = currentScreen.px + currentState.vx * vScale;
-      const vTipY = currentScreen.py - currentState.vy * vScale;
-      const distToVTip = Math.hypot(aTipX - vTipX, aTipY - vTipY);
-      if (distToVTip < 36 * sf) {
-        aOffsetY += (currentState.ay >= 0 ? -16 * sf : 20 * sf);
-      }
-    }
-
-    ctx.fillText(
-      aLabel,
-      aLabelX,
-      aTipY + aOffsetY
-    );
-    ctx.restore();
-
-    // 两轴观察模式下，分加速度 ax 与 ay 数值精确定位在分加速度矢量箭头附近，随缩放始终跟随箭头
-    if (observationMode === 'both') {
-      if (hasAx) {
-        ctx.save();
-        ctx.fillStyle = isDark ? '#fde047' : '#b45309';
-        ctx.textAlign = 'center';
-        // 若同时显示速度且两矢量同向在同侧，做垂直错距偏移避免文字叠放
-        const hasActiveVelX = vectorOptions.showVelocity && Math.abs(currentState.vx) > 0.05;
-        const sameSideY = (currentState.vy >= 0 && currentState.ay >= 0) || (currentState.vy < 0 && currentState.ay < 0);
-        const axOffset = hasActiveVelX && sameSideY ? 34 * sf : 18 * sf;
-        const axLabelY = currentScreen.py + (currentState.ay >= 0 ? axOffset : -(hasActiveVelX && sameSideY ? 28 * sf : 14 * sf));
-        // 核心改动：锚定在 ax 箭头顶端 (axTipX) 附近，放大/缩小/移动时始终跟随箭头！
-        const axLabelX = Math.min(w - 45 * sf, Math.max(45 * sf, axTipX));
-        ctx.fillText(`ax = ${currentState.ax.toFixed(1)} m/s²`, axLabelX, axLabelY);
-        ctx.restore();
-      }
-
-      if (hasAy) {
-        ctx.save();
-        ctx.fillStyle = isDark ? '#fbbf24' : '#d97706';
-        const ayAlignRight = currentState.ax >= 0;
-        ctx.textAlign = ayAlignRight ? 'right' : 'left';
-        ctx.textBaseline = 'middle';
-        let ayLabelX = currentScreen.px + (ayAlignRight ? -10 * sf : 10 * sf);
-        // 核心改动：锚定在 ay 箭头顶端 (ayTipY) 附近，放大/缩小/移动时始终跟随箭头！
-        const ayLabelY = Math.min(h - 18 * sf, Math.max(18 * sf, ayTipY));
-        // 若同时显示速度且 vy 与 ay 箭头顶端垂直非常靠近，做横向错位
-        if (vectorOptions.showVelocity && Math.abs(currentState.vy) > 0.05) {
-          const maxVel = Math.max(Math.abs(currentState.vx), Math.abs(currentState.vy), currentState.v);
-          const baseVScale = maxVel <= 3.5 ? 13.0 : maxVel <= 7.0 ? 9.5 : maxVel <= 12.0 ? 7.0 : 5.0;
-          const vScale = baseVScale * zoomRatio * sf;
-          const vyTipYVal = currentScreen.py - currentState.vy * vScale;
-          if (Math.abs(vyTipYVal - ayLabelY) < 22 * sf) {
-            ayLabelX += (ayAlignRight ? -58 * sf : 58 * sf);
-          }
-        }
-        ctx.fillText(`ay = ${currentState.ay.toFixed(1)} m/s²`, ayLabelX, ayLabelY);
-        ctx.restore();
-      }
-    }
-  }
-
-  // 7. Main Particle / Boat Model (合运动质点：小船渡河模型显示为小船，船头始终指向+y方向)
+  // 6B. Main Particle / Boat Model (先绘制小船/质点，确保速度与加速度矢量绘制在小船之上，绝不被遮挡！)
   if (isRiverCrossing) {
     drawBoat(ctx, currentScreen.px, currentScreen.py, sf, isDark, currentTime, currentState);
   } else {
     ctx.save();
     ctx.beginPath();
-    ctx.arc(currentScreen.px, currentScreen.py, 15 * sf, 0, Math.PI * 2);
+    ctx.arc(currentScreen.px, currentScreen.py, 14 * sf, 0, Math.PI * 2);
     ctx.fillStyle = isDark ? 'rgba(56, 189, 248, 0.28)' : 'rgba(37, 99, 235, 0.18)';
     ctx.fill();
 
@@ -1082,15 +851,353 @@ function drawSceneToContext({
       ctx.shadowBlur = 12 * sf;
     }
     ctx.beginPath();
-    ctx.arc(currentScreen.px, currentScreen.py, 8.5 * sf, 0, Math.PI * 2);
+    ctx.arc(currentScreen.px, currentScreen.py, 8 * sf, 0, Math.PI * 2);
     ctx.fillStyle = isDark ? '#38bdf8' : '#1d4ed8';
     ctx.fill();
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2.5 * sf;
+    ctx.lineWidth = 2.2 * sf;
     ctx.stroke();
 
     ctx.restore();
   }
+
+  // 6C. 速度合成与分解 (Velocity Vector v)
+  const zoomRatio = Math.max(0.25, scale / 35);
+  const maxVel = Math.max(Math.abs(currentState.vx), Math.abs(currentState.vy), currentState.v);
+
+  // 速度矢量自适应显示比例：
+  // 在中小速度(小船过河、蜡块、基础两直线合成等 1~6 m/s)下显著增大比例(24~32倍)，
+  // 使得分速度箭头长达 72px~125px，远远伸出小船船体(船宽15px)，绝不被遮挡；
+  // 在高速运动(平抛/斜抛下落阶段达到 15~30 m/s)下平滑缓释，保持在合适视野内
+  let baseVScale: number;
+  if (maxVel <= 2.5) {
+    baseVScale = 32.0;
+  } else if (maxVel <= 5.5) {
+    baseVScale = 24.0; // 小船过河 (vx=3, vy=4, v=5): vx=72px, vy=96px, v合=120px，远超船身！
+  } else if (maxVel <= 9.0) {
+    baseVScale = 17.0; // 平抛 vx=6: vx=102px
+  } else if (maxVel <= 15.0) {
+    baseVScale = 11.5;
+  } else if (maxVel <= 22.0) {
+    baseVScale = 8.5;
+  } else {
+    baseVScale = 6.0;
+  }
+  const vScale = baseVScale * zoomRatio * sf;
+  const hasVx = Math.abs(currentState.vx) > 0.05;
+  const hasVy = Math.abs(currentState.vy) > 0.05;
+  const vTipX = currentScreen.px + currentState.vx * vScale;
+  const vTipY = currentScreen.py - currentState.vy * vScale;
+  const vxTipX = currentScreen.px + currentState.vx * vScale;
+  const vxTipY = currentScreen.py;
+  const vyTipX = currentScreen.px;
+  const vyTipY = currentScreen.py - currentState.vy * vScale;
+
+  if (vectorOptions.showVelocity && currentState.v > 0.05) {
+    const velColor = isDark ? '#f43f5e' : '#dc2626';
+    const velCompColor = isDark ? '#fb7185' : '#e11d48';
+
+    if (observationMode === 'both') {
+      if (hasVx && hasVy) {
+        // 【两轴均有速度】：绘制合速度与两个分速度及平行四边形
+        drawArrow(currentScreen.px, currentScreen.py, vTipX, vTipY, velColor, 3.4 * sf);
+        drawArrow(currentScreen.px, currentScreen.py, vxTipX, vxTipY, velCompColor, 2.6 * sf);
+        drawArrow(currentScreen.px, currentScreen.py, vyTipX, vyTipY, velCompColor, 2.6 * sf);
+
+        if (vectorOptions.showParallelogram) {
+          ctx.save();
+          ctx.strokeStyle = isDark ? '#f43f5e' : '#f87171';
+          ctx.lineWidth = Math.max(1, 1 * sf);
+          ctx.setLineDash([3 * sf, 3 * sf]);
+          ctx.beginPath();
+          ctx.moveTo(vxTipX, vxTipY);
+          ctx.lineTo(vTipX, vTipY);
+          ctx.moveTo(vyTipX, vyTipY);
+          ctx.lineTo(vTipX, vTipY);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // 合速度数值标注 (位于合速度箭头顶端外侧)
+        ctx.font = `bold ${Math.round(11 * sf)}px sans-serif`;
+        ctx.fillStyle = velColor;
+        const vLabel = isRiverCrossing
+          ? `v合 = ${currentState.v.toFixed(2)} m/s`
+          : `v合 = ${currentState.v.toFixed(2)} m/s`;
+        ctx.save();
+        const vAlignRight = currentState.vx < 0;
+        ctx.textAlign = vAlignRight ? 'right' : 'left';
+        const vOffsetY = currentState.vy >= 0 ? -8 * sf : 16 * sf;
+        ctx.fillText(vLabel, vTipX + (vAlignRight ? -8 * sf : 8 * sf), vTipY + vOffsetY);
+        ctx.restore();
+
+        // vx 标注
+        ctx.save();
+        ctx.font = `bold ${Math.round(11 * sf)}px sans-serif`;
+        ctx.fillStyle = isDark ? '#38bdf8' : '#0284c7';
+        ctx.textAlign = 'center';
+        const vxLabelY = currentScreen.py + (currentState.vy >= 0 ? 18 * sf : -12 * sf);
+        const vxLabelX = Math.min(w - 36 * sf, Math.max(36 * sf, vxTipX));
+        const vxText = isRiverCrossing ? `v_水 = ${currentState.vx.toFixed(1)} m/s` : `vx = ${currentState.vx.toFixed(1)} m/s`;
+        ctx.fillText(vxText, vxLabelX, vxLabelY);
+        ctx.restore();
+
+        // vy 标注
+        ctx.save();
+        ctx.font = `bold ${Math.round(11 * sf)}px sans-serif`;
+        ctx.fillStyle = isDark ? '#fbbf24' : '#b45309';
+        const vyAlignRight = currentState.vx >= 0;
+        ctx.textAlign = vyAlignRight ? 'right' : 'left';
+        ctx.textBaseline = 'middle';
+        const vyLabelX = currentScreen.px + (vyAlignRight ? -10 * sf : 10 * sf);
+        const vyLabelY = Math.min(h - 18 * sf, Math.max(18 * sf, vyTipY));
+        const vyText = isRiverCrossing ? `v_船 = ${currentState.vy.toFixed(1)} m/s` : `vy = ${currentState.vy.toFixed(1)} m/s`;
+        ctx.fillText(vyText, vyLabelX, vyLabelY);
+        ctx.restore();
+
+      } else if (hasVx && !hasVy) {
+        // 【合速度等于 X 轴分速度】：只画一个矢量，旁边显示两个表示
+        drawArrow(currentScreen.px, currentScreen.py, vxTipX, vxTipY, velColor, 3.4 * sf);
+        ctx.save();
+        ctx.font = `bold ${Math.round(11 * sf)}px sans-serif`;
+        ctx.textAlign = 'center';
+        const vxLabelX = Math.min(w - 36 * sf, Math.max(36 * sf, vxTipX));
+        const line1Y = currentScreen.py + 18 * sf;
+        const line2Y = line1Y + 14 * sf;
+        ctx.fillStyle = velColor;
+        ctx.fillText(`v = ${currentState.v.toFixed(2)} m/s`, vxLabelX, line1Y);
+        ctx.fillStyle = isDark ? '#38bdf8' : '#0284c7';
+        const vxText = isRiverCrossing ? `v_水 = ${currentState.vx.toFixed(1)} m/s` : `vx = ${currentState.vx.toFixed(1)} m/s`;
+        ctx.fillText(vxText, vxLabelX, line2Y);
+        ctx.restore();
+
+      } else if (!hasVx && hasVy) {
+        // 【合速度等于 Y 轴分速度】：只画一个矢量，旁边显示两个表示
+        drawArrow(currentScreen.px, currentScreen.py, vyTipX, vyTipY, velColor, 3.4 * sf);
+        ctx.save();
+        ctx.font = `bold ${Math.round(11 * sf)}px sans-serif`;
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        const vyLabelX = currentScreen.px - 10 * sf;
+        const anchorY = Math.min(h - 24 * sf, Math.max(24 * sf, vyTipY));
+        ctx.fillStyle = velColor;
+        ctx.fillText(`v = ${currentState.v.toFixed(2)} m/s`, vyLabelX, anchorY - 7 * sf);
+        ctx.fillStyle = isDark ? '#fbbf24' : '#b45309';
+        const vyText = isRiverCrossing ? `v_船 = ${currentState.vy.toFixed(1)} m/s` : `vy = ${currentState.vy.toFixed(1)} m/s`;
+        ctx.fillText(vyText, vyLabelX, anchorY + 7 * sf);
+        ctx.restore();
+      }
+    } else {
+      // 单轴观察模式：只绘制合速度或相应轴速度
+      drawArrow(currentScreen.px, currentScreen.py, vTipX, vTipY, velColor, 3.4 * sf);
+      ctx.save();
+      ctx.font = `bold ${Math.round(11 * sf)}px sans-serif`;
+      ctx.fillStyle = velColor;
+      const vAlignRight = currentState.vx < 0;
+      ctx.textAlign = vAlignRight ? 'right' : 'left';
+      ctx.fillText(`v = ${currentState.v.toFixed(2)} m/s`, vTipX + (vAlignRight ? -8 * sf : 8 * sf), vTipY - 8 * sf);
+      ctx.restore();
+    }
+  }
+
+  // 6D. 加速度合成与分解 (Acceleration Vector a)
+  if (vectorOptions.showAcceleration && currentState.a > 0.05) {
+    const accColor = isDark ? '#fbbf24' : '#d97706';
+    const accCompColor = isDark ? '#fde047' : '#b45309';
+
+    // 缩放响应：随画布缩放比例 (scale) 动态等比例放大/缩小加速度平行四边形
+    const maxAccel = Math.max(Math.abs(currentState.ax), Math.abs(currentState.ay), currentState.a);
+    let baseAScale: number;
+    if (maxAccel <= 2.2) {
+      baseAScale = 35.0; // 例如 ax=2, ay=2: 箭长 70px，比例恰当舒适
+    } else if (maxAccel <= 4.5) {
+      baseAScale = 25.0; // 例如 a=3: 箭长 75px
+    } else if (maxAccel <= 7.0) {
+      baseAScale = 18.0;
+    } else if (maxAccel <= 11.0) {
+      baseAScale = 12.0; // 例如 g=9.8: 箭长 117.6px
+    } else {
+      baseAScale = 8.0;
+    }
+    const aScale = baseAScale * zoomRatio * sf;
+
+    const hasAx = Math.abs(currentState.ax) > 0.05;
+    const hasAy = Math.abs(currentState.ay) > 0.05;
+    const hasBothA = hasAx && hasAy;
+
+    // 所有加速度矢量均从质点中心 (currentScreen.px, currentScreen.py) 出发
+    const aTipX = currentScreen.px + currentState.ax * aScale;
+    const aTipY = currentScreen.py - currentState.ay * aScale;
+    const axTipX = currentScreen.px + currentState.ax * aScale;
+    const axTipY = currentScreen.py;
+    const ayTipX = currentScreen.px;
+    const ayTipY = currentScreen.py - currentState.ay * aScale;
+
+    if (observationMode === 'both') {
+      if (hasBothA) {
+        // 【情况一：两个方向均有加速度】
+        // 存在真实的二维加速度合成，绘制合加速度、两个分加速度及平行四边形虚线
+        drawArrow(currentScreen.px, currentScreen.py, aTipX, aTipY, accColor, 3.4 * sf);
+        drawArrow(currentScreen.px, currentScreen.py, axTipX, axTipY, accCompColor, 2.6 * sf);
+        drawArrow(currentScreen.px, currentScreen.py, ayTipX, ayTipY, accCompColor, 2.6 * sf);
+
+        // 加速度平行四边形虚线辅助线
+        if (vectorOptions.showParallelogram) {
+          ctx.save();
+          ctx.strokeStyle = isDark ? '#f59e0b' : '#fbbf24';
+          ctx.lineWidth = Math.max(1, 1.2 * sf);
+          ctx.setLineDash([3.5 * sf, 3.5 * sf]);
+          ctx.beginPath();
+          ctx.moveTo(axTipX, axTipY);
+          ctx.lineTo(aTipX, aTipY);
+          ctx.moveTo(ayTipX, ayTipY);
+          ctx.lineTo(aTipX, aTipY);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // 标注三处：a合，ax，ay
+        ctx.font = `bold ${Math.round(11 * sf)}px sans-serif`;
+        // 1. a合 标注
+        ctx.save();
+        ctx.fillStyle = accColor;
+        const aAlignRight = currentState.ax < 0;
+        ctx.textAlign = aAlignRight ? 'right' : 'left';
+        let aOffsetY = currentState.ay >= 0 ? -10 * sf : 18 * sf;
+        if (vectorOptions.showVelocity && currentState.v > 0.05) {
+          const distToVTip = Math.hypot(aTipX - vTipX, aTipY - vTipY);
+          if (distToVTip < 42 * sf) {
+            aOffsetY += (currentState.ay >= 0 ? -20 * sf : 24 * sf);
+          }
+        }
+        ctx.fillText(`a合 = ${currentState.a.toFixed(2)} m/s²`, aTipX + (aAlignRight ? -10 * sf : 10 * sf), aTipY + aOffsetY);
+        ctx.restore();
+
+        // 2. ax 标注
+        ctx.save();
+        ctx.fillStyle = accCompColor;
+        ctx.textAlign = 'center';
+        const hasActiveVelX = vectorOptions.showVelocity && Math.abs(currentState.vx) > 0.05;
+        const axOffset = hasActiveVelX ? 36 * sf : 20 * sf;
+        const axLabelY = currentScreen.py + (currentState.ay >= 0 ? axOffset : -axOffset);
+        const axLabelX = Math.min(w - 45 * sf, Math.max(45 * sf, axTipX));
+        ctx.fillText(`ax = ${currentState.ax.toFixed(1)} m/s²`, axLabelX, axLabelY);
+        ctx.restore();
+
+        // 3. ay 标注
+        ctx.save();
+        ctx.fillStyle = accCompColor;
+        const ayAlignRight = currentState.ax >= 0;
+        ctx.textAlign = ayAlignRight ? 'right' : 'left';
+        ctx.textBaseline = 'middle';
+        let ayLabelX = currentScreen.px + (ayAlignRight ? -12 * sf : 12 * sf);
+        const ayLabelY = Math.min(h - 18 * sf, Math.max(18 * sf, ayTipY));
+        if (vectorOptions.showVelocity && Math.abs(currentState.vy) > 0.05) {
+          const vyTipYVal = currentScreen.py - currentState.vy * vScale;
+          if (Math.abs(vyTipYVal - ayLabelY) < 26 * sf) {
+            ayLabelX += (ayAlignRight ? -54 * sf : 54 * sf);
+          }
+        }
+        ctx.fillText(`ay = ${currentState.ay.toFixed(1)} m/s²`, ayLabelX, ayLabelY);
+        ctx.restore();
+
+      } else if (hasAy && !hasAx) {
+        // 【情况二：合加速度等于 Y 轴分加速度（例如平抛、斜抛）】
+        // 核心规范：合运动加速度与分运动加速度是同一个矢量！
+        // 绝不画成两条并列的线，而是重合只画一个实线矢量（从质点出发沿着Y轴）
+        drawArrow(currentScreen.px, currentScreen.py, ayTipX, ayTipY, accColor, 3.4 * sf);
+
+        // 核心规范：在该矢量旁边同时显示两个表示：
+        // 既是合运动加速度 a，又是 Y 轴分运动加速度 ay！
+        ctx.save();
+        ctx.font = `bold ${Math.round(11 * sf)}px sans-serif`;
+
+        // 避让逻辑：若质点向右运动(vx>=0)，将文本放置在竖直矢量左侧；反之放置在右侧，彻底避免遮挡
+        const showOnLeft = currentState.vx >= 0;
+        ctx.textAlign = showOnLeft ? 'right' : 'left';
+        const labelX = currentScreen.px + (showOnLeft ? -12 * sf : 12 * sf);
+
+        // 垂直位置锚定在矢量箭头顶端附近，两行紧凑清晰排列
+        const anchorY = Math.min(h - 32 * sf, Math.max(32 * sf, ayTipY));
+        const line1Y = anchorY + (currentState.ay >= 0 ? -16 * sf : 4 * sf);
+        const line2Y = line1Y + 14 * sf;
+
+        // 表示一：合运动加速度
+        ctx.fillStyle = accColor;
+        ctx.fillText(`a = ${currentState.a.toFixed(2)} m/s²`, labelX, line1Y);
+
+        // 表示二：Y轴分运动加速度
+        ctx.fillStyle = accCompColor;
+        ctx.fillText(`ay = ${currentState.ay.toFixed(1)} m/s²`, labelX, line2Y);
+
+        ctx.restore();
+
+      } else if (hasAx && !hasAy) {
+        // 【情况三：合加速度等于 X 轴分加速度（例如转弯调头）】
+        // 核心规范：合运动加速度与分运动加速度是同一个矢量！
+        // 绝不画成两条并列的线，而是重合只画一个实线矢量（从质点出发沿着X轴）
+        drawArrow(currentScreen.px, currentScreen.py, axTipX, axTipY, accColor, 3.4 * sf);
+
+        // 核心规范：在该矢量旁边同时显示两个表示：
+        // 既是合运动加速度 a，又是 X 轴分运动加速度 ax！
+        ctx.save();
+        ctx.font = `bold ${Math.round(11 * sf)}px sans-serif`;
+        ctx.textAlign = 'center';
+
+        const labelX = Math.min(w - 45 * sf, Math.max(45 * sf, axTipX));
+        const baseOffset = (vectorOptions.showVelocity && Math.abs(currentState.vx) > 0.05) ? 36 * sf : 20 * sf;
+        const line1Y = currentScreen.py + (currentState.vy >= 0 ? baseOffset : -baseOffset - 14 * sf);
+        const line2Y = line1Y + 14 * sf;
+
+        // 表示一：合运动加速度
+        ctx.fillStyle = accColor;
+        ctx.fillText(`a = ${currentState.a.toFixed(2)} m/s²`, labelX, line1Y);
+
+        // 表示二：X轴分运动加速度
+        ctx.fillStyle = accCompColor;
+        ctx.fillText(`ax = ${currentState.ax.toFixed(1)} m/s²`, labelX, line2Y);
+
+        ctx.restore();
+      }
+
+    } else if (observationMode === 'only_x') {
+      if (hasAx) {
+        drawArrow(currentScreen.px, currentScreen.py, axTipX, axTipY, accCompColor, 2.6 * sf);
+        ctx.save();
+        ctx.font = `bold ${Math.round(11 * sf)}px sans-serif`;
+        ctx.fillStyle = accCompColor;
+        ctx.textAlign = 'center';
+        const axLabelY = currentScreen.py + 20 * sf;
+        const axLabelX = Math.min(w - 45 * sf, Math.max(45 * sf, axTipX));
+        ctx.fillText(`ax = ${currentState.ax.toFixed(1)} m/s²`, axLabelX, axLabelY);
+        ctx.restore();
+      }
+    } else if (observationMode === 'only_y') {
+      if (hasAy) {
+        drawArrow(currentScreen.px, currentScreen.py, ayTipX, ayTipY, accCompColor, 2.6 * sf);
+        ctx.save();
+        ctx.font = `bold ${Math.round(11 * sf)}px sans-serif`;
+        ctx.fillStyle = accCompColor;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        const ayLabelX = currentScreen.px + 12 * sf;
+        const ayLabelY = Math.min(h - 18 * sf, Math.max(18 * sf, ayTipY));
+        ctx.fillText(`ay = ${currentState.ay.toFixed(1)} m/s²`, ayLabelX, ayLabelY);
+        ctx.restore();
+      }
+    }
+  }
+
+  // 7. Center Vector Anchor Hub (矢量出发根部轴心，黑白双环防遮挡高亮，确保矢量起点鲜明)
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(currentScreen.px, currentScreen.py, 3.6 * sf, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.strokeStyle = '#0f172a';
+  ctx.lineWidth = 1.4 * sf;
+  ctx.stroke();
+  ctx.restore();
 
   // 8. Fixed Position Coordinate HUD Badge in Top-Right Corner (所有播放模块固定显示在主舞台右上角)
   ctx.save();
@@ -1206,7 +1313,8 @@ export const CoordinateCanvas: React.FC<CoordinateCanvasProps> = ({
   const isRiverCrossing = Boolean(
     isRiverCrossingModel ||
     currentPresetId === 'river-crossing' ||
-    (currentPresetName && currentPresetName.includes('小船渡河'))
+    (currentPresetName &&
+      (currentPresetName.includes('小船渡河') || currentPresetName.includes('小船过河')))
   );
 
   const [ambientWaveTick, setAmbientWaveTick] = useState(0);

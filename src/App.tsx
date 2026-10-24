@@ -124,13 +124,13 @@ export default function App() {
     defaultPreset.observationMode
   );
 
-  // Vector Display Options
+  // Vector Display Options (默认仅显示合运动与轨迹，各合成与投影由用户自主勾选显示)
   const [vectorOptions, setVectorOptions] = useState<VectorDisplayOptions>({
-    showDisplacement: true,
-    showVelocity: true,
-    showAcceleration: defaultPreset.vectorOptions?.showAcceleration ?? false,
-    showParallelogram: true,
-    showProjections: true,
+    showDisplacement: false,
+    showVelocity: false,
+    showAcceleration: false,
+    showParallelogram: false,
+    showProjections: false,
     showTrajectory: true,
     showStrobe: false,
     strobeInterval: 0.5,
@@ -294,6 +294,13 @@ export default function App() {
     currentPresetId === 'river-crossing' ||
     activeModelType === 'river-crossing' ||
     (currentPreset?.id === 'river-crossing');
+
+  const isWaxBlock =
+    currentPresetId === 'wax-block' ||
+    activeModelType === 'wax-block' ||
+    (currentPreset?.id === 'wax-block') ||
+    (currentPreset?.name?.includes('蜡块') ?? false) ||
+    (currentPreset?.name?.includes('蜡烛') ?? false);
 
   return (
     <div className="min-h-screen bg-tech-grid text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
@@ -503,7 +510,7 @@ export default function App() {
         />
 
         {/* 1. 主演示模块 (Hero Demonstration Stage) */}
-        <div className="space-y-3.5">
+        <div className="space-y-2.5">
           {/* 直角坐标系大屏屏幕外框 (科技屏幕外框，高保真示波器/实验显示器质感) */}
           <section
             className={`${
@@ -527,6 +534,7 @@ export default function App() {
               currentPresetId={currentPresetId}
               currentPresetName={currentPreset?.name}
               isRiverCrossingModel={isRiverCrossing}
+              isWaxBlockModel={isWaxBlock}
               onOpenDriveModal={() => setShowDriveModal(true)}
             />
           </section>

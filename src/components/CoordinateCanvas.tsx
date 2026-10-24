@@ -48,6 +48,7 @@ interface CoordinateCanvasProps {
   currentPresetId?: string | null;
   currentPresetName?: string;
   isRiverCrossingModel?: boolean;
+  isWaxBlockModel?: boolean;
   onOpenDriveModal?: () => void;
 }
 
@@ -75,6 +76,7 @@ interface DrawSceneParams {
   currentState: InstantaneousState;
   bannerOffsetTop?: number;
   isRiverCrossing?: boolean;
+  isWaxBlock?: boolean;
   ambientTick?: number;
 }
 
@@ -420,6 +422,331 @@ function drawBoat(
 }
 
 /**
+ * Real Physical Apparatus: Transparent Glass Tube & Paraffin Wax Block
+ * (人教版必修二 蜡块演示实验高保真物理情境：盛水长玻璃管随管水平匀速移动，蜡块在管内匀速上浮)
+ */
+function drawGlassTubeAndWaxBlock({
+  ctx,
+  currentScreen,
+  origPx,
+  origPy,
+  scale,
+  sf,
+  isDark,
+  currentTime,
+  yConfig,
+  duration,
+  w,
+  bannerOffsetTop = 0,
+}: {
+  ctx: CanvasRenderingContext2D;
+  currentScreen: { px: number; py: number };
+  origPx: number;
+  origPy: number;
+  scale: number;
+  sf: number;
+  isDark: boolean;
+  currentTime: number;
+  currentState: InstantaneousState;
+  yConfig: AxisMotionConfig;
+  duration: number;
+  w: number;
+  h: number;
+  bannerOffsetTop?: number;
+  observationMode: ObservationMode;
+}) {
+  const tubePx = currentScreen.px;
+  const waxPy = currentScreen.py;
+
+  // Vertical span of the glass tube: spans from bottom support below y=0 to top stopper above maxY
+  const maxExpY = Math.max(10, (yConfig.v0 || 3) * duration);
+  const tubeBottomPy = origPy + 28 * sf; // just below the X axis
+  const tubeTopPy = Math.max(bannerOffsetTop + 24 * sf, origPy - (maxExpY + 1.2) * scale - 24 * sf);
+  const tubeHeight = Math.max(80 * sf, tubeBottomPy - tubeTopPy);
+
+  const tubeOuterW = 28 * sf;
+  const tubeHalfW = tubeOuterW / 2;
+
+  // 1. Horizontal Laboratory Guide Rail (底座水平导轨，位于X轴下方，长玻璃管在此导轨上向右滑移)
+  ctx.save();
+  const railY = origPy + 16 * sf;
+  const railH = 8 * sf;
+  const railGrad = ctx.createLinearGradient(0, railY, 0, railY + railH);
+  if (isDark) {
+    railGrad.addColorStop(0, '#334155');
+    railGrad.addColorStop(0.4, '#64748b');
+    railGrad.addColorStop(1, '#1e293b');
+  } else {
+    railGrad.addColorStop(0, '#94a3b8');
+    railGrad.addColorStop(0.4, '#e2e8f0');
+    railGrad.addColorStop(1, '#64748b');
+  }
+  ctx.fillStyle = railGrad;
+  ctx.fillRect(0, railY, w, railH);
+  // Rail upper metallic edge highlight
+  ctx.fillStyle = isDark ? '#94a3b8' : '#f8fafc';
+  ctx.fillRect(0, railY, w, 1 * sf);
+  ctx.restore();
+
+  // 2. Tube Base Mechanical Slider & Guide Runner (长玻璃管底部滑台底座)
+  ctx.save();
+  const sliderW = 42 * sf;
+  const sliderH = 16 * sf;
+  const sliderX = tubePx - sliderW / 2;
+  const sliderY = origPy + 10 * sf;
+
+  // Slider body
+  const sliderGrad = ctx.createLinearGradient(sliderX, sliderY, sliderX, sliderY + sliderH);
+  if (isDark) {
+    sliderGrad.addColorStop(0, '#475569');
+    sliderGrad.addColorStop(0.4, '#334155');
+    sliderGrad.addColorStop(1, '#1e293b');
+  } else {
+    sliderGrad.addColorStop(0, '#cbd5e1');
+    sliderGrad.addColorStop(0.4, '#94a3b8');
+    sliderGrad.addColorStop(1, '#64748b');
+  }
+  ctx.fillStyle = sliderGrad;
+  ctx.beginPath();
+  if (ctx.roundRect) {
+    ctx.roundRect(sliderX, sliderY, sliderW, sliderH, [3 * sf, 3 * sf, 4 * sf, 4 * sf]);
+  } else {
+    ctx.rect(sliderX, sliderY, sliderW, sliderH);
+  }
+  ctx.fill();
+  ctx.strokeStyle = isDark ? '#64748b' : '#475569';
+  ctx.lineWidth = 1.2 * sf;
+  ctx.stroke();
+
+  // Slider brass knurling screws / clamp pins
+  ctx.fillStyle = '#f59e0b';
+  ctx.beginPath();
+  ctx.arc(sliderX + 6 * sf, sliderY + sliderH / 2, 2.2 * sf, 0, Math.PI * 2);
+  ctx.arc(sliderX + sliderW - 6 * sf, sliderY + sliderH / 2, 2.2 * sf, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // 3. Glass Tube Shadow & Translucent Water Column
+  ctx.save();
+  // Tube soft drop shadow
+  ctx.shadowColor = isDark ? 'rgba(56, 189, 248, 0.25)' : 'rgba(0, 0, 0, 0.18)';
+  ctx.shadowBlur = 10 * sf;
+  ctx.shadowOffsetX = 3 * sf;
+
+  // Fluid column gradient (盛满清水的玻璃管内部介质)
+  const fluidGrad = ctx.createLinearGradient(tubePx - tubeHalfW, 0, tubePx + tubeHalfW, 0);
+  if (isDark) {
+    fluidGrad.addColorStop(0, 'rgba(15, 23, 42, 0.7)');
+    fluidGrad.addColorStop(0.18, 'rgba(14, 116, 144, 0.45)');
+    fluidGrad.addColorStop(0.5, 'rgba(56, 189, 248, 0.18)');
+    fluidGrad.addColorStop(0.82, 'rgba(14, 116, 144, 0.4)');
+    fluidGrad.addColorStop(1, 'rgba(15, 23, 42, 0.75)');
+  } else {
+    fluidGrad.addColorStop(0, 'rgba(186, 230, 253, 0.55)');
+    fluidGrad.addColorStop(0.2, 'rgba(224, 242, 254, 0.75)');
+    fluidGrad.addColorStop(0.5, 'rgba(240, 249, 255, 0.85)');
+    fluidGrad.addColorStop(0.8, 'rgba(186, 230, 253, 0.6)');
+    fluidGrad.addColorStop(1, 'rgba(147, 197, 253, 0.55)');
+  }
+
+  // Draw tube cylinder body
+  ctx.beginPath();
+  if (ctx.roundRect) {
+    ctx.roundRect(tubePx - tubeHalfW, tubeTopPy, tubeOuterW, tubeHeight, 6 * sf);
+  } else {
+    ctx.rect(tubePx - tubeHalfW, tubeTopPy, tubeOuterW, tubeHeight);
+  }
+  ctx.fillStyle = fluidGrad;
+  ctx.fill();
+
+  // Glass outer border stroke
+  ctx.strokeStyle = isDark ? 'rgba(148, 163, 184, 0.6)' : 'rgba(100, 116, 139, 0.6)';
+  ctx.lineWidth = 1.6 * sf;
+  ctx.stroke();
+  ctx.restore();
+
+  // 4. Metric Graduations & Decimeter Marks on Glass Wall (玻璃管刻度)
+  ctx.save();
+  ctx.strokeStyle = isDark ? 'rgba(148, 163, 184, 0.5)' : 'rgba(100, 116, 139, 0.55)';
+  ctx.fillStyle = isDark ? '#94a3b8' : '#64748b';
+  ctx.font = `${Math.round(8.5 * sf)}px monospace`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+
+  const tickSpacingMeters = 1.0;
+  const tickPx = tickSpacingMeters * scale;
+  const numTicks = Math.floor(maxExpY + 2);
+  for (let tk = 0; tk <= numTicks; tk++) {
+    const py = origPy - tk * tickPx;
+    if (py >= tubeTopPy + 16 * sf && py <= tubeBottomPy - 10 * sf) {
+      const isMajor = tk % 2 === 0;
+      const tickW = isMajor ? 6 * sf : 3.5 * sf;
+      ctx.beginPath();
+      ctx.moveTo(tubePx + tubeHalfW - 2 * sf, py);
+      ctx.lineTo(tubePx + tubeHalfW - 2 * sf - tickW, py);
+      ctx.stroke();
+
+      if (isMajor && tk > 0) {
+        ctx.fillText(`${tk}m`, tubePx + tubeHalfW + 3 * sf, py);
+      }
+    }
+  }
+  ctx.restore();
+
+  // 5. Rising Micro-Bubbles in Fluid (上升微小流体气泡，动态上升感)
+  ctx.save();
+  const bubbleCount = 6;
+  ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 0.65)' : 'rgba(255, 255, 255, 0.85)';
+  for (let b = 0; b < bubbleCount; b++) {
+    const bubbleSpeed = 1.8 + b * 0.4;
+    const bPhase = (currentTime * bubbleSpeed + b * 2.3) % 1;
+    const bY = tubeBottomPy - 15 * sf - bPhase * (tubeHeight - 35 * sf);
+    const bX = tubePx - 5 * sf + ((b * 4.7) % 10) * sf;
+    const bR = (1.2 + (b % 3) * 0.5) * sf;
+
+    if (bY > tubeTopPy + 12 * sf && bY < tubeBottomPy - 10 * sf) {
+      ctx.beginPath();
+      ctx.arc(bX, bY, bR, 0, Math.PI * 2);
+      ctx.fill();
+      // Highlight dot on bubble
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(bX - 0.4 * sf, bY - 0.4 * sf, bR * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+
+  // 6. Wax Block Entity (精致圆柱形红蜡块)
+  const waxW = 16 * sf;
+  const waxH = 19 * sf;
+  const waxHalfW = waxW / 2;
+  const waxHalfH = waxH / 2;
+
+  ctx.save();
+  // Wax subtle buoyant trail bubbles
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+  const trailOffset = (currentTime * 18) % 8;
+  ctx.beginPath();
+  ctx.arc(tubePx, waxPy + waxHalfH + 4 * sf + trailOffset * sf, 1.8 * sf, 0, Math.PI * 2);
+  ctx.arc(tubePx - 2 * sf, waxPy + waxHalfH + 9 * sf, 1.4 * sf, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Wax cylinder body shadow
+  ctx.shadowColor = 'rgba(239, 68, 68, 0.5)';
+  ctx.shadowBlur = 8 * sf;
+
+  // Wax cylinder main body
+  const waxGrad = ctx.createLinearGradient(tubePx - waxHalfW, 0, tubePx + waxHalfW, 0);
+  waxGrad.addColorStop(0, '#991b1b');   // deep red shadow
+  waxGrad.addColorStop(0.2, '#dc2626'); // vibrant red
+  waxGrad.addColorStop(0.5, '#ef4444'); // warm core
+  waxGrad.addColorStop(0.8, '#f87171'); // coral highlight
+  waxGrad.addColorStop(1, '#b91c1c');   // right rim shadow
+
+  ctx.fillStyle = waxGrad;
+  ctx.beginPath();
+  if (ctx.roundRect) {
+    ctx.roundRect(tubePx - waxHalfW, waxPy - waxHalfH, waxW, waxH, [3 * sf, 3 * sf, 4 * sf, 4 * sf]);
+  } else {
+    ctx.rect(tubePx - waxHalfW, waxPy - waxHalfH, waxW, waxH);
+  }
+  ctx.fill();
+
+  // Wax top perspective ellipse face (立体椭圆顶面)
+  const topOvalRy = 2.8 * sf;
+  const topOvalGrad = ctx.createRadialGradient(
+    tubePx - 2 * sf,
+    waxPy - waxHalfH,
+    1 * sf,
+    tubePx,
+    waxPy - waxHalfH,
+    waxHalfW
+  );
+  topOvalGrad.addColorStop(0, '#fecaca'); // bright peach/rose highlight
+  topOvalGrad.addColorStop(0.6, '#f87171');
+  topOvalGrad.addColorStop(1, '#dc2626');
+
+  ctx.fillStyle = topOvalGrad;
+  ctx.beginPath();
+  ctx.ellipse(tubePx, waxPy - waxHalfH, waxHalfW, topOvalRy, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Pure white specular spot on wax top
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+  ctx.beginPath();
+  ctx.arc(tubePx - 3 * sf, waxPy - waxHalfH - 0.5 * sf, 1.4 * sf, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Delicate dark outline for wax block
+  ctx.strokeStyle = '#7f1d1d';
+  ctx.lineWidth = 1 * sf;
+  ctx.stroke();
+  ctx.restore();
+
+  // 7. Front Specular Highlight Ribbon of the Glass Tube (覆盖在蜡块前方的玻璃高光反光带，产生置身管内的折射质感)
+  ctx.save();
+  const highlightX = tubePx - 7 * sf;
+  const highlightGrad = ctx.createLinearGradient(0, tubeTopPy, 0, tubeBottomPy);
+  highlightGrad.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
+  highlightGrad.addColorStop(0.3, 'rgba(255, 255, 255, 0.65)');
+  highlightGrad.addColorStop(0.7, 'rgba(255, 255, 255, 0.5)');
+  highlightGrad.addColorStop(1, 'rgba(255, 255, 255, 0.15)');
+
+  ctx.fillStyle = highlightGrad;
+  ctx.fillRect(highlightX, tubeTopPy + 6 * sf, 2.5 * sf, tubeHeight - 12 * sf);
+
+  // Secondary soft specular rim on right
+  ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.4)';
+  ctx.fillRect(tubePx + 8 * sf, tubeTopPy + 6 * sf, 1.2 * sf, tubeHeight - 12 * sf);
+  ctx.restore();
+
+  // 8. Top Rubber Stopper (顶部密封橡皮塞与金属压盖)
+  ctx.save();
+  const stopperW = 24 * sf;
+  const stopperH = 14 * sf;
+  const stopperX = tubePx - stopperW / 2;
+  const stopperY = tubeTopPy - stopperH + 4 * sf;
+
+  const stopperGrad = ctx.createLinearGradient(stopperX, stopperY, stopperX, stopperY + stopperH);
+  if (isDark) {
+    stopperGrad.addColorStop(0, '#475569');
+    stopperGrad.addColorStop(0.5, '#1e293b');
+    stopperGrad.addColorStop(1, '#0f172a');
+  } else {
+    stopperGrad.addColorStop(0, '#57301c');
+    stopperGrad.addColorStop(0.5, '#3e2723');
+    stopperGrad.addColorStop(1, '#271711');
+  }
+  ctx.fillStyle = stopperGrad;
+  ctx.beginPath();
+  // Tapered rubber plug
+  ctx.moveTo(stopperX + 3 * sf, stopperY + stopperH);
+  ctx.lineTo(stopperX, stopperY + 4 * sf);
+  ctx.lineTo(stopperX + stopperW, stopperY + 4 * sf);
+  ctx.lineTo(stopperX + stopperW - 3 * sf, stopperY + stopperH);
+  ctx.closePath();
+  ctx.fill();
+
+  // Stopper rim head
+  ctx.fillStyle = isDark ? '#64748b' : '#6d4c41';
+  ctx.beginPath();
+  if (ctx.roundRect) {
+    ctx.roundRect(stopperX - 2 * sf, stopperY, stopperW + 4 * sf, 4.5 * sf, 2 * sf);
+  } else {
+    ctx.rect(stopperX - 2 * sf, stopperY, stopperW + 4 * sf, 4.5 * sf);
+  }
+  ctx.fill();
+
+  // Top Label
+  ctx.font = `bold ${Math.round(10 * sf)}px sans-serif`;
+  ctx.fillStyle = isDark ? '#38bdf8' : '#0284c7';
+  ctx.textAlign = 'center';
+  ctx.fillText('长玻璃管 (盛水)', tubePx, stopperY - 6 * sf);
+  ctx.restore();
+}
+
+/**
  * Pure coordinate scene drawing routine used by both on-screen render and high-res snapshot export.
  */
 function drawSceneToContext({
@@ -440,6 +767,7 @@ function drawSceneToContext({
   currentState,
   bannerOffsetTop = 0,
   isRiverCrossing = false,
+  isWaxBlock = false,
   ambientTick = 0,
 }: DrawSceneParams) {
   const sf = scaleFactor;
@@ -836,9 +1164,27 @@ function drawSceneToContext({
     ctx.fillText(`s = ${currentState.s.toFixed(2)} m`, midPx + 8 * sf, midPy - 8 * sf);
   }
 
-  // 6B. Main Particle / Boat Model (先绘制小船/质点，确保速度与加速度矢量绘制在小船之上，绝不被遮挡！)
+  // 6B. Main Physical Model (先绘制小船/长玻璃管与蜡块/质点，确保矢量绘制在模型之上，绝不被遮挡！)
   if (isRiverCrossing) {
     drawBoat(ctx, currentScreen.px, currentScreen.py, sf, isDark, currentTime, currentState);
+  } else if (isWaxBlock) {
+    drawGlassTubeAndWaxBlock({
+      ctx,
+      currentScreen,
+      origPx,
+      origPy,
+      scale,
+      sf,
+      isDark,
+      currentTime,
+      currentState,
+      yConfig,
+      duration,
+      w,
+      h,
+      bannerOffsetTop,
+      observationMode,
+    });
   } else {
     ctx.save();
     ctx.beginPath();
@@ -861,11 +1207,12 @@ function drawSceneToContext({
     ctx.restore();
   }
 
-  // 6C. 速度合成与分解 (Velocity Vector v)
+  // 6C & 6D. 速度与加速度合成与分解 (Velocity & Acceleration Dynamic Scales & Spacing Separation)
   const zoomRatio = Math.max(0.25, scale / 35);
   const maxVel = Math.max(Math.abs(currentState.vx), Math.abs(currentState.vy), currentState.v);
+  const maxAccel = Math.max(Math.abs(currentState.ax), Math.abs(currentState.ay), currentState.a);
 
-  // 速度矢量自适应显示比例：
+  // 1. 速度矢量基础显示比例：
   // 在中小速度(小船过河、蜡块、基础两直线合成等 1~6 m/s)下显著增大比例(24~32倍)，
   // 使得分速度箭头长达 72px~125px，远远伸出小船船体(船宽15px)，绝不被遮挡；
   // 在高速运动(平抛/斜抛下落阶段达到 15~30 m/s)下平滑缓释，保持在合适视野内
@@ -873,25 +1220,120 @@ function drawSceneToContext({
   if (maxVel <= 2.5) {
     baseVScale = 32.0;
   } else if (maxVel <= 5.5) {
-    baseVScale = 24.0; // 小船过河 (vx=3, vy=4, v=5): vx=72px, vy=96px, v合=120px，远超船身！
+    baseVScale = 24.0;
   } else if (maxVel <= 9.0) {
-    baseVScale = 17.0; // 平抛 vx=6: vx=102px
+    baseVScale = 17.0;
   } else if (maxVel <= 15.0) {
-    baseVScale = 11.5;
+    baseVScale = 12.0;
   } else if (maxVel <= 22.0) {
     baseVScale = 8.5;
   } else {
     baseVScale = 6.0;
   }
   const vScale = baseVScale * zoomRatio * sf;
+
+  // 2. 加速度矢量基础显示比例：精细设在紧凑适中区间，与速度基准尺度形成清晰的视觉层级区分
+  let baseAScale: number;
+  if (maxAccel <= 2.2) {
+    baseAScale = 24.0;
+  } else if (maxAccel <= 4.5) {
+    baseAScale = 18.0;
+  } else if (maxAccel <= 7.0) {
+    baseAScale = 12.0;
+  } else if (maxAccel <= 11.0) {
+    baseAScale = 7.0; // 例如重力 g=9.8 时基础箭长约 68.6px
+  } else {
+    baseAScale = 5.0;
+  }
+  let aScale = baseAScale * zoomRatio * sf;
+
   const hasVx = Math.abs(currentState.vx) > 0.05;
   const hasVy = Math.abs(currentState.vy) > 0.05;
-  const vTipX = currentScreen.px + currentState.vx * vScale;
-  const vTipY = currentScreen.py - currentState.vy * vScale;
-  const vxTipX = currentScreen.px + currentState.vx * vScale;
+  const hasAx = Math.abs(currentState.ax) > 0.05;
+  const hasAy = Math.abs(currentState.ay) > 0.05;
+  const hasBothA = hasAx && hasAy;
+  const hasBothV = hasVx && hasVy;
+
+  // 各分矢量原始长度 (像素)
+  let lenVx = Math.abs(currentState.vx) * vScale;
+  let lenVy = Math.abs(currentState.vy) * vScale;
+  let lenAx = Math.abs(currentState.ax) * aScale;
+  let lenAy = Math.abs(currentState.ay) * aScale;
+  let lenV = currentState.v * vScale;
+  let lenA = currentState.a * aScale;
+
+  // 【核心机制：当某个方向上既有速度又有加速度时，合理安排两个矢量的长度，让两个矢量的箭头距离远一些，标注完全不遮挡】
+  const MIN_TIP_GAP = 54 * sf; // 箭头尖端之间的最小黄金间隔 (>= 54px)，确保两箭头与标注绝不重叠
+
+  if (vectorOptions.showVelocity && vectorOptions.showAcceleration) {
+    // A. Y 轴方向：若同向（例如平抛/斜抛下落阶段两者均竖直向下）
+    if (hasVy && hasAy && (currentState.vy * currentState.ay > 0)) {
+      const gapY = Math.abs(lenVy - lenAy);
+      if (gapY < MIN_TIP_GAP) {
+        if (lenVy >= 68 * sf) {
+          // 速度较大时，速度箭头保持真实外伸反映运动，加速度箭头收缩至紧凑长度，拉开安全间距
+          lenAy = Math.max(28 * sf, lenVy - MIN_TIP_GAP);
+        } else {
+          // 速度较小时，加速度箭头延伸，确保两箭头显著错开
+          lenAy = lenVy + MIN_TIP_GAP;
+        }
+      }
+    }
+
+    // B. X 轴方向：若同向（例如均沿水平向右加速或均向左加速）
+    if (hasVx && hasAx && (currentState.vx * currentState.ax > 0)) {
+      const gapX = Math.abs(lenVx - lenAx);
+      if (gapX < MIN_TIP_GAP) {
+        if (lenVx >= 68 * sf) {
+          lenAx = Math.max(28 * sf, lenVx - MIN_TIP_GAP);
+        } else {
+          lenAx = lenVx + MIN_TIP_GAP;
+        }
+      }
+    }
+
+    // C. 合运动方向：若合速度与合加速度方向同向共线或接近同向 (夹角小于30度)
+    if (currentState.v > 0.05 && currentState.a > 0.05) {
+      const vAngle = Math.atan2(-currentState.vy, currentState.vx);
+      const aAngle = Math.atan2(-currentState.ay, currentState.ax);
+      let angleDiff = Math.abs(vAngle - aAngle);
+      while (angleDiff > Math.PI * 2) angleDiff -= Math.PI * 2;
+      if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
+
+      if (angleDiff < 0.52) { // 30度以内
+        const gapRes = Math.abs(lenV - lenA);
+        if (gapRes < MIN_TIP_GAP) {
+          if (lenV >= 72 * sf) {
+            lenA = Math.max(30 * sf, lenV - MIN_TIP_GAP);
+          } else {
+            lenA = lenV + MIN_TIP_GAP;
+          }
+        }
+      }
+    }
+  }
+
+  // 计算最终速度箭头坐标
+  const vDirX = currentState.v > 0.001 ? currentState.vx / currentState.v : 0;
+  const vDirY = currentState.v > 0.001 ? currentState.vy / currentState.v : 0;
+  const vTipX = currentScreen.px + vDirX * lenV;
+  const vTipY = currentScreen.py - vDirY * lenV;
+
+  const vxTipX = currentScreen.px + (currentState.vx >= 0 ? lenVx : -lenVx);
   const vxTipY = currentScreen.py;
   const vyTipX = currentScreen.px;
-  const vyTipY = currentScreen.py - currentState.vy * vScale;
+  const vyTipY = currentScreen.py - (currentState.vy >= 0 ? lenVy : -lenVy);
+
+  // 计算最终加速度箭头坐标
+  const aDirX = currentState.a > 0.001 ? currentState.ax / currentState.a : 0;
+  const aDirY = currentState.a > 0.001 ? currentState.ay / currentState.a : 0;
+  const aTipX = currentScreen.px + aDirX * lenA;
+  const aTipY = currentScreen.py - aDirY * lenA;
+
+  const axTipX = currentScreen.px + (currentState.ax >= 0 ? lenAx : -lenAx);
+  const axTipY = currentScreen.py;
+  const ayTipX = currentScreen.px;
+  const ayTipY = currentScreen.py - (currentState.ay >= 0 ? lenAy : -lenAy);
 
   if (vectorOptions.showVelocity && currentState.v > 0.05) {
     const velColor = isDark ? '#f43f5e' : '#dc2626';
@@ -1005,34 +1447,6 @@ function drawSceneToContext({
     const accColor = isDark ? '#fbbf24' : '#d97706';
     const accCompColor = isDark ? '#fde047' : '#b45309';
 
-    // 缩放响应：随画布缩放比例 (scale) 动态等比例放大/缩小加速度平行四边形
-    const maxAccel = Math.max(Math.abs(currentState.ax), Math.abs(currentState.ay), currentState.a);
-    let baseAScale: number;
-    if (maxAccel <= 2.2) {
-      baseAScale = 35.0; // 例如 ax=2, ay=2: 箭长 70px，比例恰当舒适
-    } else if (maxAccel <= 4.5) {
-      baseAScale = 25.0; // 例如 a=3: 箭长 75px
-    } else if (maxAccel <= 7.0) {
-      baseAScale = 18.0;
-    } else if (maxAccel <= 11.0) {
-      baseAScale = 12.0; // 例如 g=9.8: 箭长 117.6px
-    } else {
-      baseAScale = 8.0;
-    }
-    const aScale = baseAScale * zoomRatio * sf;
-
-    const hasAx = Math.abs(currentState.ax) > 0.05;
-    const hasAy = Math.abs(currentState.ay) > 0.05;
-    const hasBothA = hasAx && hasAy;
-
-    // 所有加速度矢量均从质点中心 (currentScreen.px, currentScreen.py) 出发
-    const aTipX = currentScreen.px + currentState.ax * aScale;
-    const aTipY = currentScreen.py - currentState.ay * aScale;
-    const axTipX = currentScreen.px + currentState.ax * aScale;
-    const axTipY = currentScreen.py;
-    const ayTipX = currentScreen.px;
-    const ayTipY = currentScreen.py - currentState.ay * aScale;
-
     if (observationMode === 'both') {
       if (hasBothA) {
         // 【情况一：两个方向均有加速度】
@@ -1093,7 +1507,7 @@ function drawSceneToContext({
         let ayLabelX = currentScreen.px + (ayAlignRight ? -12 * sf : 12 * sf);
         const ayLabelY = Math.min(h - 18 * sf, Math.max(18 * sf, ayTipY));
         if (vectorOptions.showVelocity && Math.abs(currentState.vy) > 0.05) {
-          const vyTipYVal = currentScreen.py - currentState.vy * vScale;
+          const vyTipYVal = vyTipY;
           if (Math.abs(vyTipYVal - ayLabelY) < 26 * sf) {
             ayLabelX += (ayAlignRight ? -54 * sf : 54 * sf);
           }
@@ -1305,6 +1719,7 @@ export const CoordinateCanvas: React.FC<CoordinateCanvasProps> = ({
   currentPresetId,
   currentPresetName,
   isRiverCrossingModel,
+  isWaxBlockModel,
   onOpenDriveModal,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1315,6 +1730,13 @@ export const CoordinateCanvas: React.FC<CoordinateCanvasProps> = ({
     currentPresetId === 'river-crossing' ||
     (currentPresetName &&
       (currentPresetName.includes('小船渡河') || currentPresetName.includes('小船过河')))
+  );
+
+  const isWaxBlock = Boolean(
+    isWaxBlockModel ||
+    currentPresetId === 'wax-block' ||
+    (currentPresetName &&
+      (currentPresetName.includes('蜡烛') || currentPresetName.includes('蜡块')))
   );
 
   const [ambientWaveTick, setAmbientWaveTick] = useState(0);
@@ -1850,6 +2272,7 @@ export const CoordinateCanvas: React.FC<CoordinateCanvasProps> = ({
       duration,
       currentState,
       isRiverCrossing,
+      isWaxBlock,
       ambientTick: ambientWaveTick,
     });
 
@@ -1865,6 +2288,7 @@ export const CoordinateCanvas: React.FC<CoordinateCanvasProps> = ({
     currentState,
     screenTheme,
     isRiverCrossing,
+    isWaxBlock,
     ambientWaveTick,
   ]);
 
@@ -1944,6 +2368,7 @@ export const CoordinateCanvas: React.FC<CoordinateCanvasProps> = ({
         currentState,
         bannerOffsetTop: bannerHeight * resScale,
         isRiverCrossing,
+        isWaxBlock,
         ambientTick: ambientWaveTick,
       });
 
